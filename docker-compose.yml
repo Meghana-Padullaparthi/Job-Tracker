@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5002:5001"           # host 5002 → container 5001  (no more clashes)
+    environment:
+      PORT: "5001"            # tell Flask to listen on 5001 inside the container
+      MONGO_URI: "${MONGO_URI}"
+      DB_NAME: "${DB_NAME}"
+      COLL_NAME: "${COLL_NAME}"
+      KEYWORDS: "${KEYWORDS}"
+      LOCATION: "${LOCATION}"
+      SERPAPI_KEY: "${SERPAPI_KEY}"
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:
