@@ -34,6 +34,7 @@ def home():
     q = (request.args.get("q") or "").strip()
     source = (request.args.get("source") or "").strip()
     applied = request.args.get("applied")  # "true" | "false" | None
+    status = (request.args.get("status") or "").strip()
 
     query = {}
     if q:
@@ -47,6 +48,8 @@ def home():
         query["source"] = source
     if applied in ("true", "false"):
         query["applied"] = (applied == "true")
+    if status:
+        query["status"] = status
 
     # Pull jobs newest-first
     jobs = list(col.find(query).sort([("last_seen", -1), ("first_seen", -1)]))
@@ -58,12 +61,17 @@ def home():
     # Sources list for the filter dropdown
     sources = sorted({doc.get("source", "Unknown") for doc in col.find({}, {"source": 1})})
 
+    # Status list for the filter dropdown
+    statuses = sorted({doc.get("status", "Unknown") for doc in col.find({}, {"status": 1})})
+    
     return render_template("index.html",
                            jobs=jobs,
                            q=q,
                            source=source,
                            applied=applied,
-                           sources=sources)
+                           status=status,
+                           sources=sources,
+                           statuses=statuses)
 
 @app.post("/api/jobs/<job_id>/applied")
 def set_applied(job_id: str):
@@ -92,13 +100,14 @@ def set_applied(job_id: str):
 
     return jsonify({"ok": True, "applied": applied})
 
-@app.route("/add_job", methods=["POST"])
+@app.post("/add_job", methods=["POST"])
 def add_job():
     data = request.get_json()
     title = data.get("title")
     company = data.get("company")
     location = data.get("location")
     applied_date = data.get("applied_date")
+    status = data.get("status")
 
     if not title or not company:
         return jsonify({"ok": False, "error": "Title and company are required"}), 400
@@ -111,7 +120,8 @@ def add_job():
         "first_seen": datetime.now(timezone.utc).date().isoformat(),
         "last_seen": datetime.now(timezone.utc).date().isoformat(),
         "applied": True, # Manually added jobs are by default "applied"
-        "added_manually_date": applied_date or datetime.now(timezone.utc).date().isoformat()
+        "added_manually_date": applied_date or datetime.now(timezone.utc).date().isoformat(),
+        "status": status or "Applied" # Set default status if not provided
     }
 
     try:
@@ -121,7 +131,5 @@ def add_job():
         app.logger.error(f"Failed to insert manual job: {e}")
         return jsonify({"ok": False, "error": "Database error"}), 500
 
-# ----- Entrypoint -----
-if __name__ == "__main__":
-    # PORT is set in docker-compose; defaults to 5000 for local python runs
-    app.run(port=5003, debug=True)
+@app.route("/api/jobs/<job_id>/delete", methods=["DELETE"])
+def delete_job

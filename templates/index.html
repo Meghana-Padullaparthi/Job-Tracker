@@ -19,7 +19,7 @@
     <div class="col-md-4">
       <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Search title, company, location">
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
       <select name="source" class="form-select">
         <option value="">All sources</option>
         {% for s in sources %}
@@ -27,7 +27,15 @@
         {% endfor %}
       </select>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
+      <select name="status" class="form-select">
+        <option value="">All statuses</option>
+        {% for s in statuses %}
+          <option value="{{ s }}" {% if status==s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
       <select name="applied" class="form-select">
         <option value="">Applied: All</option>
         <option value="false" {% if applied == "false" %}selected{% endif %}>Not applied</option>
@@ -53,7 +61,8 @@
           <th>Source</th>
           <th>First Seen</th>
           <th>Applied</th>
-          <th>Link</th>
+          <th>Status</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -71,7 +80,14 @@
                      {% if j.get('applied') %}checked{% endif %}>
             </div>
           </td>
-          <td><a href="{{ j.get('link','#') }}" target="_blank" rel="noopener">View posting</a></td>
+          <td>{{ j.get('status', 'N/A') }}</td>
+          <td>
+              {% if j.get('source') == 'Manual' %}
+                  <button class="btn btn-sm btn-danger delete-btn" data-id="{{ j['id_str'] }}">Delete</button>
+              {% else %}
+                  <a href="{{ j.get('link','#') }}" target="_blank" rel="noopener">View posting</a>
+              {% endif %}
+          </td>
         </tr>
       {% endfor %}
       </tbody>
@@ -105,6 +121,15 @@
                     <div class="mb-3">
                         <label for="appliedDate" class="form-label">Application Date</label>
                         <input type="date" class="form-control" id="appliedDate" name="applied_date">
+                    </div>
+                    <div class="mb-3">
+                        <label for="status" class="form-label">Status</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="Applied">Applied</option>
+                            <option value="Interviewing">Interviewing</option>
+                            <option value="Rejected">Rejected</option>
+                            <option value="Offered">Offered</option>
+                        </select>
                     </div>
                 </div>
                 <div class="modal-footer">

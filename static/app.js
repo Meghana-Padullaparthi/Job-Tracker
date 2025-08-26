@@ -14,6 +14,23 @@ document.querySelectorAll(".applied-toggle").forEach(cb => {
   });
 });
 
+document.querySelectorAll(".delete-btn").forEach(btn => {
+  btn.addEventListener("click", async (e) => {
+      if (!confirm("Are you sure you want to delete this job?")) {
+          return;
+      }
+      const id = e.target.getAttribute("data-id");
+      try {
+          await axios.delete(`/api/jobs/${id}/delete`);
+          alert("Job deleted successfully!");
+          window.location.reload();
+      } catch (err) {
+          alert("Failed to delete job. Please retry.");
+      }
+  });
+});
+
+
 document.getElementById("addJobForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const form = e.target;
