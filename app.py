@@ -55,7 +55,7 @@ def home():
         j["id_str"] = str(j["_id"])
 
     # Sources list for the filter dropdown
-    sources = sorted({doc.get("source", "Unknown") for doc in col.find({}, {"source": 1})})
+    sources = sorted({doc.get("source", "Unknown").capitalize() for doc in col.find({}, {"source": 1})})
 
     return render_template("index.html",
                            jobs=jobs,
