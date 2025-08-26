@@ -4,6 +4,7 @@ from bson import ObjectId, errors as bson_errors
 from flask import Flask, render_template, request, jsonify
 from pymongo import MongoClient
 from dotenv import load_dotenv
+from datetime import datetime, timezone
 
 # Load .env so MONGO_URI, SERPAPI_KEY, etc. are available when running locally
 load_dotenv()
@@ -55,7 +56,7 @@ def home():
         j["id_str"] = str(j["_id"])
 
     # Sources list for the filter dropdown
-    sources = sorted({doc.get("source", "Unknown").capitalize() for doc in col.find({}, {"source": 1})})
+    sources = sorted({doc.get("source", "Unknown") for doc in col.find({}, {"source": 1})})
 
     return render_template("index.html",
                            jobs=jobs,
@@ -91,8 +92,36 @@ def set_applied(job_id: str):
 
     return jsonify({"ok": True, "applied": applied})
 
+@app.route("/add_job", methods=["POST"])
+def add_job():
+    data = request.get_json()
+    title = data.get("title")
+    company = data.get("company")
+    location = data.get("location")
+    applied_date = data.get("applied_date")
+
+    if not title or not company:
+        return jsonify({"ok": False, "error": "Title and company are required"}), 400
+
+    job_data = {
+        "title": title,
+        "company": company,
+        "location": location,
+        "source": "Manual",  # New source to identify manually added jobs
+        "first_seen": datetime.now(timezone.utc).date().isoformat(),
+        "last_seen": datetime.now(timezone.utc).date().isoformat(),
+        "applied": True, # Manually added jobs are by default "applied"
+        "added_manually_date": applied_date or datetime.now(timezone.utc).date().isoformat()
+    }
+
+    try:
+        res = col.insert_one(job_data)
+        return jsonify({"ok": True, "id": str(res.inserted_id)}), 201
+    except Exception as e:
+        app.logger.error(f"Failed to insert manual job: {e}")
+        return jsonify({"ok": False, "error": "Database error"}), 500
+
 # ----- Entrypoint -----
 if __name__ == "__main__":
     # PORT is set in docker-compose; defaults to 5000 for local python runs
     app.run(port=5003, debug=True)
-
