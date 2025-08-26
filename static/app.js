@@ -7,10 +7,28 @@ document.querySelectorAll(".applied-toggle").forEach(cb => {
       const row = e.target.closest("tr");
       if (applied) row.classList.add("table-success");
       else row.classList.remove("table-success");
+      window.location.reload(); // Reload to update UI with status dropdown
     } catch (err) {
       alert("Failed to update. Please retry.");
       e.target.checked = !applied;
     }
+  });
+});
+
+document.querySelectorAll(".status-update").forEach(select => {
+  select.addEventListener("change", async (e) => {
+      const id = e.target.getAttribute("data-id");
+      const status = e.target.value;
+      try {
+          await axios.post(`/api/jobs/${id}/status`, { status });
+          alert("Status updated successfully!");
+      } catch (err) {
+          const errorMessage = err.response && err.response.data && err.response.data.error
+              ? err.response.data.error
+              : "Failed to update status. Please retry.";
+          alert(errorMessage);
+          e.target.value = e.target.getAttribute("data-original-status");
+      }
   });
 });
 
@@ -46,6 +64,9 @@ document.getElementById("addJobForm").addEventListener("submit", async (e) => {
       // Reload the page to show the new job
       window.location.reload();
   } catch (err) {
-      alert("Failed to add job. Please retry.");
+      const errorMessage = err.response && err.response.data && err.response.data.error
+          ? err.response.data.error
+          : "Failed to add job. Please retry.";
+      alert(errorMessage);
   }
 });

@@ -80,7 +80,20 @@
                      {% if j.get('applied') %}checked{% endif %}>
             </div>
           </td>
-          <td>{{ j.get('status', 'N/A') }}</td>
+          <td>
+              {% if j.get('applied') %}
+              <select class="form-select status-update"
+                      data-id="{{ j['id_str'] }}"
+                      data-original-status="{{ j.get('status', 'Applied') }}">
+                  <option value="Applied" {% if j.get('status', 'Applied') == 'Applied' %}selected{% endif %}>Applied</option>
+                  <option value="Interviewing" {% if j.get('status') == 'Interviewing' %}selected{% endif %}>Interviewing</option>
+                  <option value="Rejected" {% if j.get('status') == 'Rejected' %}selected{% endif %}>Rejected</option>
+                  <option value="Offered" {% if j.get('status') == 'Offered' %}selected{% endif %}>Offered</option>
+              </select>
+              {% else %}
+              Not Applied
+              {% endif %}
+          </td>
           <td>
               {% if j.get('source') == 'Manual' %}
                   <button class="btn btn-sm btn-danger delete-btn" data-id="{{ j['id_str'] }}">Delete</button>

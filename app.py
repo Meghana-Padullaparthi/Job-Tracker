@@ -59,11 +59,11 @@ def home():
         j["id_str"] = str(j["_id"])
 
     # Sources list for the filter dropdown
-    sources = sorted({doc.get("source", "Unknown") for doc in col.find({}, {"source": 1})})
+    sources = sorted({doc.get("source", "Unknown").title() for doc in col.find({}, {"source": 1})})
 
     # Status list for the filter dropdown
     statuses = sorted({doc.get("status", "Unknown") for doc in col.find({}, {"status": 1})})
-    
+
     return render_template("index.html",
                            jobs=jobs,
                            q=q,
@@ -100,7 +100,23 @@ def set_applied(job_id: str):
 
     return jsonify({"ok": True, "applied": applied})
 
-@app.post("/add_job", methods=["POST"])
+@app.post("/api/jobs/<job_id>/status")
+def set_status(job_id: str):
+    payload = request.get_json(force=True) or {}
+    status = payload.get("status", "")
+
+    try:
+        _id = ObjectId(job_id)
+    except bson_errors.InvalidId:
+        return jsonify({"ok": False, "error": f"Invalid job_id: {job_id}"}), 400
+
+    res = col.update_one({"_id": _id}, {"$set": {"status": status}})
+    if res.matched_count == 0:
+        return jsonify({"ok": False, "error": "Job not found"}), 404
+
+    return jsonify({"ok": True, "status": status})
+
+@app.post("/add_job")
 def add_job():
     data = request.get_json()
     title = data.get("title")
@@ -116,12 +132,12 @@ def add_job():
         "title": title,
         "company": company,
         "location": location,
-        "source": "Manual",  # New source to identify manually added jobs
+        "source": "Manual",
         "first_seen": datetime.now(timezone.utc).date().isoformat(),
         "last_seen": datetime.now(timezone.utc).date().isoformat(),
-        "applied": True, # Manually added jobs are by default "applied"
+        "applied": True,
         "added_manually_date": applied_date or datetime.now(timezone.utc).date().isoformat(),
-        "status": status or "Applied" # Set default status if not provided
+        "status": status or "Applied"
     }
 
     try:
@@ -129,7 +145,29 @@ def add_job():
         return jsonify({"ok": True, "id": str(res.inserted_id)}), 201
     except Exception as e:
         app.logger.error(f"Failed to insert manual job: {e}")
-        return jsonify({"ok": False, "error": "Database error"}), 500
+        return jsonify({"ok": False, "error": f"Database error: {e}"}), 500
 
 @app.route("/api/jobs/<job_id>/delete", methods=["DELETE"])
-def delete_job
+def delete_job(job_id: str):
+    try:
+        _id = ObjectId(job_id)
+    except bson_errors.InvalidId:
+        return jsonify({"ok": False, "error": f"Invalid job_id: {job_id}"}), 400
+
+    # Ensure only manually added jobs can be deleted
+    job = col.find_one({"_id": _id})
+    if not job:
+        return jsonify({"ok": False, "error": "Job not found"}), 404
+    if job.get("source") != "Manual":
+        return jsonify({"ok": False, "error": "Only manually added jobs can be deleted"}), 403
+
+    res = col.delete_one({"_id": _id})
+    if res.deleted_count == 0:
+        return jsonify({"ok": False, "error": "Job not found"}), 404
+
+    return jsonify({"ok": True}), 200
+
+# ----- Entrypoint -----
+if __name__ == "__main__":
+    # PORT is set in docker-compose; defaults to 5000 for local python runs
+    app.run(port=5003, debug=True)
